@@ -1,27 +1,46 @@
 package ru.clevertec.check.service;
 
-import ru.clevertec.check.util.CSVReader;
-import ru.clevertec.check.util.CheckPrinter;
 import ru.clevertec.check.exception.InsufficientBalanceException;
 import ru.clevertec.check.exception.InsufficientStockException;
 import ru.clevertec.check.exception.ProductNotFoundException;
 import ru.clevertec.check.model.DiscountCard;
 import ru.clevertec.check.model.Product;
+import ru.clevertec.check.util.CSVReader;
+import ru.clevertec.check.util.CheckPrinter;
 
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
 public class CheckExecutor implements ICheckExecutorInterface {
 
     @Override
-    public void executeCheck(Map<Integer, Integer> productQuantities, DiscountCard discountCard, double balance) {
+    public void executeCheck(Map<Integer, Integer> productQuantities, DiscountCard discountCard, double balance, String pathToFile, String saveToFile) {
 
-        IProductService productService = new ProductService(CSVReader.readProducts("./src/main/resources/products.csv"));
+
+        if (pathToFile == null || pathToFile.isEmpty()) {
+            try (FileWriter writer = new FileWriter("result.csv")) {
+                writer.write("BAD REQUEST: Missing pathToFile argument");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return;
+        }
+
+
+        Map<Integer, Product> products = CSVReader.readProducts(pathToFile);
+
+        if (products.isEmpty()) {
+            System.out.println("No products found in the specified file: " + pathToFile);
+            return;
+        }
+
+        IProductService productService = new ProductService(products);
         Map<Product, Integer> purchasedProducts = new HashMap<>();
         double total = 0.0;
 
         try {
-
             for (Map.Entry<Integer, Integer> entry : productQuantities.entrySet()) {
                 int productId = entry.getKey();
                 int quantity = entry.getValue();
@@ -40,12 +59,16 @@ public class CheckExecutor implements ICheckExecutorInterface {
                 total += productTotal;
             }
 
+            if (saveToFile == null || saveToFile.isEmpty()) {
+                saveToFile = "result.csv";
+            }
+
             if (balance < total) {
                 throw new InsufficientBalanceException("Недостаточно средств на дебетовой карте");
             }
 
-            // Вывод чека с использованием CheckPrinter
-            CheckPrinter.printCheck(purchasedProducts, discountCard, total, balance - total);
+
+            CheckPrinter.printCheck(purchasedProducts, discountCard, total, balance - total, saveToFile);
         } catch (ProductNotFoundException | InsufficientStockException | InsufficientBalanceException e) {
             System.out.println(e.getMessage());
         }

@@ -10,16 +10,14 @@ import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
 public class CheckPrinter {
-    public static void printCheck(Map<Product, Integer> products, DiscountCard discountCard, double total, double balance) {
+    public static void printCheck(Map<Product, Integer> products, DiscountCard discountCard, double total, double balance, String saveToFile) {
         StringBuilder check = new StringBuilder();
-
 
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd.MM.yyyy;HH:mm:ss");
         LocalDateTime now = LocalDateTime.now();
         check.append("Date;Time\n")
                 .append(dtf.format(now))
                 .append("\n\n");
-
 
         check.append("QTY;DESCRIPTION;PRICE;DISCOUNT;TOTAL\n");
 
@@ -67,7 +65,7 @@ public class CheckPrinter {
                 .append(String.format("%.2f$", total))
                 .append("\n");
 
-        try (FileWriter writer = new FileWriter("result.csv")) {
+        try (FileWriter writer = new FileWriter(saveToFile)) {
             writer.write(check.toString());
         } catch (IOException e) {
             e.printStackTrace();
