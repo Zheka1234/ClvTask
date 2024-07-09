@@ -11,7 +11,6 @@ import java.util.Map;
 
 
 public class ArgumentProcessor implements IArgumentProcessorInterface {
-
     public static ArgumentProcessor createAndProcess(String[] args) {
         ArgumentProcessor argumentProcessor = new ArgumentProcessor();
         argumentProcessor.processArguments(args);
@@ -20,24 +19,27 @@ public class ArgumentProcessor implements IArgumentProcessorInterface {
 
     @Override
     public void processArguments(String[] args) {
-
-        if (args.length < 5) {
-            System.out.println("Использование: java -cp src ./src/main/java/ru/clevertec/check/CheckRunner.java id-quantity discountCard=xxxx balanceDebitCard=xxxx pathToFile=xxxx saveToFile=xxxx");
+        if (args.length < 7) {
+            System.out.println("Использование: java -jar clevertec-check.jar id-quantity discountCard=xxxx balanceDebitCard=xxxx saveToFile=xxxx datasource.url=xxxx datasource.username=xxxx datasource.password=xxxx");
             return;
         }
 
         Map<Integer, Integer> productQuantities = new HashMap<>();
         DiscountCard discountCard = null;
         double balance = 0.0;
-        String pathToFile = null;
         String saveToFile = null;
+        String dbUrl = null;
+        String dbUsername = null;
+        String dbPassword = null;
 
         for (String arg : args) {
-
             if (arg.startsWith("discountCard=")) {
                 String cardNumber = arg.split("=")[1];
+                dbUrl = getArgValue(args, "datasource.url=");
+                dbUsername = getArgValue(args, "datasource.username=");
+                dbPassword = getArgValue(args, "datasource.password=");
 
-                IDiscountService discountService = new DiscountService(CSVReader.readDiscountCards("./src/main/resources/discountCards.csv"));
+                IDiscountService discountService = new DiscountService(CSVReader.readDiscountCards(dbUrl, dbUsername, dbPassword));
                 try {
                     discountCard = discountService.getDiscountCard(cardNumber);
                 } catch (InvalidCardException e) {
@@ -46,8 +48,6 @@ public class ArgumentProcessor implements IArgumentProcessorInterface {
                 }
             } else if (arg.startsWith("balanceDebitCard=")) {
                 balance = Double.parseDouble(arg.split("=")[1]);
-            } else if (arg.startsWith("pathToFile=")) {
-                pathToFile = arg.split("=")[1];
             } else if (arg.startsWith("saveToFile=")) {
                 saveToFile = arg.split("=")[1];
             } else {
@@ -58,9 +58,9 @@ public class ArgumentProcessor implements IArgumentProcessorInterface {
             }
         }
 
-        if (pathToFile == null) {
+        if (dbUrl == null || dbUsername == null || dbPassword == null) {
             try (FileWriter writer = new FileWriter("result.csv")) {
-                writer.write("BAD REQUEST: Missing pathToFile argument");
+                writer.write("BAD REQUEST: Missing database connection arguments");
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -68,6 +68,15 @@ public class ArgumentProcessor implements IArgumentProcessorInterface {
         }
 
         ICheckExecutorInterface checkExecutor = new CheckExecutor();
-        checkExecutor.executeCheck(productQuantities, discountCard, balance, pathToFile, saveToFile);
+        checkExecutor.executeCheck(productQuantities, discountCard, balance, dbUrl, dbUsername, dbPassword, saveToFile);
+    }
+
+    private String getArgValue(String[] args, String prefix) {
+        for (String arg : args) {
+            if (arg.startsWith(prefix)) {
+                return arg.split("=")[1];
+            }
+        }
+        return null;
     }
 }

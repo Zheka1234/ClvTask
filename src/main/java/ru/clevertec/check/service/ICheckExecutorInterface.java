@@ -5,5 +5,5 @@ import ru.clevertec.check.model.DiscountCard;
 import java.util.Map;
 
 public interface ICheckExecutorInterface {
-    void executeCheck(Map<Integer, Integer> productQuantities, DiscountCard discountCard, double balance, String pathToFile, String saveToFile);
+    void executeCheck(Map<Integer, Integer> productQuantities, DiscountCard discountCard, double balance, String pathToFile, String saveToFile, String dbPassword, String toFile);
 }
